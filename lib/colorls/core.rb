@@ -27,10 +27,11 @@ module ColorLS
   class Core # rubocop:disable Metrics/ClassLength
     MIN_SIZE_CHARS = 4
 
+    # rubocop:disable Metrics/MethodLength
     def initialize(all: false, sort: false, show: false,
       mode: nil, show_git: false, almost_all: false, colors: [], group: nil,
       reverse: false, hyperlink: false, tree_depth: nil, show_inode: false,
-      indicator_style: 'slash', long_style_options: {}, icons: true)
+      indicator_style: 'slash', long_style_options: {}, icons: true, recursive: false)
       @count = {folders: 0, recognized_files: 0, unrecognized_files: 0}
       @all          = all
       @almost_all   = almost_all
@@ -49,15 +50,18 @@ module ColorLS
       @indicator_style = indicator_style
       @hard_links_count = long_style_options.key?(:hard_links_count) ? long_style_options[:hard_links_count] : true
       @icons = icons
+      @recursive = recursive
 
       init_colors colors
       init_icons
     end
+    # rubocop:enable Metrics/MethodLength
 
     def additional_chars_per_item
       12 + (@show_git ? 4 : 0) + (@show_inode ? 10 : 0)
     end
 
+    # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
     def ls_dir(info)
       if @tree[:mode]
         print "\n"
@@ -77,7 +81,18 @@ module ColorLS
       return print "\n   Nothing to show here\n".colorize(@colors[:empty]) if @contents.empty?
 
       ls
+
+      return unless @recursive
+
+      @contents.each do |content|
+        next unless content.directory?
+        next if content.name == '.' || content.name == '..'
+
+        puts "\n#{content.path}:"
+        ls_dir(content)
+      end
     end
+    # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
 
     def ls_files(files)
       @contents = files
@@ -379,7 +394,7 @@ module ColorLS
       value = increment == :folders ? @folders[key] : @files[key]
       logo  = value.gsub(/\\u[\da-f]{4}/i) { |m| [m[-4..].to_i(16)].pack('U') }
       name = @hyperlink ? make_link(content) : content.show
-      name += content.directory? && @indicator_style != 'none' ? '/' : ' '
+      name += get_indicator(content)
       entry = @icons ? "#{out_encode(logo)}  #{out_encode(name)}" : out_encode(name).to_s
       entry = entry.bright if !content.directory? && content.executable?
 
@@ -484,5 +499,23 @@ module ColorLS
       uri = Addressable::URI.convert_path(File.absolute_path(content.path))
       "\033]8;;#{uri}\007#{content.show}\033]8;;\007"
     end
+
+    # rubocop:disable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
+    def get_indicator(content)
+      return '' if @indicator_style == 'none'
+
+      if @indicator_style == :classify
+        return '/' if content.directory?
+        return '@' if content.symlink?
+        return '*' if content.executable?
+        return '|' if content.stats.pipe?
+        return '=' if content.stats.socket?
+
+        return ' '
+      end
+
+      content.directory? ? '/' : ' '
+    end
+    # rubocop:enable Metrics/CyclomaticComplexity, Metrics/PerceivedComplexity
   end
 end

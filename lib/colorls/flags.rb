@@ -108,6 +108,7 @@ module ColorLS
         tree_depth: 3,
         show_inode: false,
         indicator_style: 'slash',
+        recursive: false,
         long_style_options: {}
       }
     end
@@ -136,6 +137,7 @@ module ColorLS
       options.on('-r', '--reverse', 'reverse order while sorting') { @opts[:reverse] = true }
     end
 
+    # rubocop:disable Metrics/MethodLength
     def add_common_options(options)
       options.on('-a', '--all', 'do not ignore entries starting with .')  { @opts[:all] = true }
       options.on('-A', '--almost-all', 'do not list . and ..')            { @opts[:almost_all] = true }
@@ -143,6 +145,10 @@ module ColorLS
       options.on('-f', '--files', 'show only files')                      { @opts[:show] = :files }
       options.on('--gs', '--git-status', 'show git status for each file') { @opts[:show_git] = true }
       options.on('-p', 'append / indicator to directories')               { @opts[:indicator_style] = 'slash' }
+      options.on('-F', '--classify', 'append indicator (one of */=>@|) to entries') do
+        @opts[:indicator_style] = :classify
+      end
+      options.on('-R', '--recursive', 'list subdirectories recursively')  { @opts[:recursive] = true }
       options.on('-i', '--inode', 'show inode number')                    { @opts[:show_inode] = true }
       options.on('--report=[WORD]', %w[short long], 'show report: short, long (default if omitted)') do |word|
         word ||= :long
@@ -150,11 +156,13 @@ module ColorLS
       end
       options.on(
         '--indicator-style=[STYLE]',
-        %w[none slash], 'append indicator with style STYLE to entry names: none, slash (-p) (default)'
+        %w[none slash classify],
+        'append indicator with style STYLE to entry names: none, slash (-p) (default), classify (-F)'
       ) do |style|
         @opts[:indicator_style] = style
       end
     end
+    # rubocop:enable Metrics/MethodLength
 
     def add_format_options(options)
       options.on(
