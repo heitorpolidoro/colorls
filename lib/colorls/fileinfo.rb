@@ -72,7 +72,7 @@ module ColorLS
     end
 
     def_delegators :@stats, :directory?, :socket?, :chardev?, :symlink?, :blockdev?, :mtime, :nlink, :size, :owned?,
-                   :executable?
+                   :executable?, :pipe?
 
     private
 

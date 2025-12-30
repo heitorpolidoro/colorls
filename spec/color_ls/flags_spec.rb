@@ -504,4 +504,52 @@ RSpec.describe ColorLS::Flags do
       expect { subject }.to output(/#{args.first}/).to_stdout
     end
   end
+
+  context 'with -F/--classify flag' do
+    let(:args) { ['-F', '-1', FIXTURES] }
+
+    it 'appends / to directories' do
+      expect { subject }.to output(/symlinks\//).to_stdout
+    end
+  end
+
+  context 'with -F flag on symlinks directory' do
+    let(:args) { ['-F', '-1', File.join(FIXTURES, 'symlinks')] }
+
+    it 'appends @ to symlinks' do
+      expect { subject }.to output(/ReadmeLink.md@/).to_stdout
+    end
+  end
+
+  context 'with --indicator-style=classify' do
+    let(:args) { ['--indicator-style=classify', '-1', FIXTURES] }
+
+    it 'appends / to directories' do
+      expect { subject }.to output(/symlinks\//).to_stdout
+    end
+  end
+
+  context 'with -R/--recursive flag' do
+    let(:args) { ['-R', FIXTURES] }
+
+    it 'lists subdirectories recursively' do
+      expect { subject }.to output(/second-level:/).to_stdout
+    end
+
+    it 'lists files in subdirectories' do
+      expect { subject }.to output(/third-level-file.txt/).to_stdout
+    end
+  end
+
+  context 'with -FR flags combined' do
+    let(:args) { ['-FR', '-1', FIXTURES] }
+
+    it 'applies both classify and recursive' do
+      expect { subject }.to output(/symlinks\//).to_stdout
+    end
+
+    it 'shows recursive content' do
+      expect { subject }.to output(/third-level-file.txt/).to_stdout
+    end
+  end
 end
